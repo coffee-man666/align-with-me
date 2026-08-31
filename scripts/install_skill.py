@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import filecmp
-import os
 import shutil
 import sys
 from pathlib import Path
@@ -13,18 +12,16 @@ from pathlib import Path
 
 SKILL_NAME = "align-with-me"
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-INSTALL_FILES = (Path("SKILL.md"), Path("agents/openai.yaml"))
+CORE_INSTALL_FILES = (Path("SKILL.md"),)
+OPENAI_METADATA = Path("agents/openai.yaml")
 
 
 class InstallError(RuntimeError):
     """Raised when installation cannot be completed safely."""
 
 
-def default_user_root() -> Path:
-    configured_root = os.environ.get("CODEX_HOME")
-    if configured_root:
-        return Path(configured_root).expanduser()
-    return Path.home() / ".codex"
+def default_user_skills_dir() -> Path:
+    return (Path.home() / ".agents" / "skills").resolve()
 
 
 def project_root_from(value: str | None) -> Path:
@@ -38,7 +35,7 @@ def project_root_from(value: str | None) -> Path:
 def choose_scope() -> str:
     print("请选择技能安装范围：")
     print("  1) 项目层：仅当前项目可用（.agents/skills/align-with-me）")
-    print("  2) 用户层：当前用户的所有项目可用（$CODEX_HOME/skills/align-with-me）")
+    print("  2) 用户层：当前用户的所有项目可用（~/.agents/skills/align-with-me）")
 
     while True:
         try:
@@ -53,19 +50,33 @@ def choose_scope() -> str:
         print("选择无效，请输入 1（项目层）或 2（用户层）。")
 
 
-def destination_for(scope: str, project_root: Path) -> Path:
+def resolve_skills_dir(value: str | None, default: Path, base: Path) -> Path:
+    skills_dir = Path(value).expanduser() if value else default
+    if not skills_dir.is_absolute():
+        skills_dir = base / skills_dir
+    return skills_dir.resolve()
+
+
+def destination_for(
+    scope: str,
+    project_skills_dir: Path,
+    user_skills_dir: Path,
+) -> Path:
     if scope == "project":
-        return project_root / ".agents" / "skills" / SKILL_NAME
-    return default_user_root() / "skills" / SKILL_NAME
+        return project_skills_dir / SKILL_NAME
+    return user_skills_dir / SKILL_NAME
 
 
-def validate_source() -> None:
-    missing = [str(path) for path in INSTALL_FILES if not (SKILL_ROOT / path).is_file()]
+def validate_source(install_files: tuple[Path, ...]) -> None:
+    missing = [str(path) for path in install_files if not (SKILL_ROOT / path).is_file()]
     if missing:
         raise InstallError(f"技能源文件缺失：{', '.join(missing)}")
 
 
-def is_matching_installation(destination: Path) -> bool:
+def is_matching_installation(
+    destination: Path,
+    install_files: tuple[Path, ...],
+) -> bool:
     return destination.is_dir() and all(
         (destination / relative_path).is_file()
         and filecmp.cmp(
@@ -73,17 +84,17 @@ def is_matching_installation(destination: Path) -> bool:
             destination / relative_path,
             shallow=False,
         )
-        for relative_path in INSTALL_FILES
+        for relative_path in install_files
     )
 
 
-def install_files(destination: Path) -> bool:
+def install_files(destination: Path, install_files: tuple[Path, ...]) -> bool:
     """Copy the skill files, returning whether a new installation was made."""
     if destination.is_symlink():
         raise InstallError(f"目标路径是符号链接，未覆盖：{destination}")
 
     if destination.exists():
-        if is_matching_installation(destination):
+        if is_matching_installation(destination, install_files):
             return False
         raise InstallError(
             f"目标路径已存在且内容不同，未覆盖：{destination}\n"
@@ -92,12 +103,12 @@ def install_files(destination: Path) -> bool:
 
     try:
         destination.mkdir(parents=True, exist_ok=False)
-        for relative_path in INSTALL_FILES:
+        for relative_path in install_files:
             target_file = destination / relative_path
             target_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(SKILL_ROOT / relative_path, target_file)
 
-        if not is_matching_installation(destination):
+        if not is_matching_installation(destination, install_files):
             raise InstallError(f"安装后校验失败：{destination}")
     except OSError as error:
         raise InstallError(f"无法写入目标路径：{destination}（{error}）") from error
@@ -117,17 +128,43 @@ def parse_args() -> argparse.Namespace:
         "--project-root",
         help="项目层的目标项目目录；默认使用当前工作目录。",
     )
+    parser.add_argument(
+        "--project-skills-dir",
+        help="项目层 skills 根目录；默认是 <project>/.agents/skills。",
+    )
+    parser.add_argument(
+        "--user-skills-dir",
+        help="用户层 skills 根目录；默认是 ~/.agents/skills。",
+    )
+    parser.add_argument(
+        "--include-openai-metadata",
+        action="store_true",
+        help="额外安装可选的 agents/openai.yaml 适配元数据。",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     try:
-        validate_source()
         project_root = project_root_from(args.project_root)
+        project_skills_dir = resolve_skills_dir(
+            args.project_skills_dir,
+            project_root / ".agents" / "skills",
+            project_root,
+        )
+        user_skills_dir = resolve_skills_dir(
+            args.user_skills_dir,
+            default_user_skills_dir(),
+            Path.cwd().resolve(),
+        )
         scope = args.scope or choose_scope()
-        destination = destination_for(scope, project_root)
-        created = install_files(destination)
+        install_files_to_copy = CORE_INSTALL_FILES
+        if args.include_openai_metadata:
+            install_files_to_copy += (OPENAI_METADATA,)
+        validate_source(install_files_to_copy)
+        destination = destination_for(scope, project_skills_dir, user_skills_dir)
+        created = install_files(destination, install_files_to_copy)
     except InstallError as error:
         print(f"安装未完成：{error}", file=sys.stderr)
         return 1

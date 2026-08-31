@@ -6,9 +6,9 @@
 
 如果你只想马上开始，复制下面这一句发给 Agent：
 
-> 请从 GitHub 仓库 `https://github.com/coffee-man666/align-with-me`（如果当前已经在该仓库目录中则直接使用当前目录）获取 `align-with-me`，运行其中的 `scripts/install_skill.py`，安装前先让我选择项目层（将 `SKILL.md` 和 `agents/openai.yaml` 安装到当前项目的 `.agents/skills/align-with-me`）或用户层（安装到 `$CODEX_HOME/skills/align-with-me`，未设置时使用 `~/.codex/skills/align-with-me`），按选择安装，确认 `SKILL.md` 存在并报告实际安装路径。
+> 请从 GitHub 仓库 `https://github.com/coffee-man666/align-with-me`（如果当前已经在该仓库目录中则直接使用当前目录）获取 `align-with-me`，运行其中的 `scripts/install_skill.py`，安装前先让我选择项目层（默认安装到当前项目的 `.agents/skills/align-with-me`）或用户层（默认安装到 `~/.agents/skills/align-with-me`），如果当前 Agent 有自己的技能发现目录就用对应参数覆盖默认路径，按选择安装核心文件 `SKILL.md`，确认当前 Agent 能发现它并报告实际安装路径。
 
-这是一条完整提示词，里面已经包含了技能来源、安装脚本、安装范围、目标文件和验收方式。它不依赖 README 的其他段落，也不要求用户先理解项目结构。
+这是一条完整提示词，里面已经包含了技能来源、安装脚本、安装范围、默认路径、适配方式、目标文件和验收方式。它不依赖特定 Agent 平台，也不要求用户先理解项目结构。
 
 ### 安装范围怎么选
 
@@ -17,7 +17,7 @@
 | 选择 | 安装位置 | 适合场景 |
 | --- | --- | --- |
 | 项目层 | `<当前项目>/.agents/skills/align-with-me` | 只在当前项目生效，适合和项目一起版本管理、与协作者共享 |
-| 用户层 | `$CODEX_HOME/skills/align-with-me`；未设置时为 `~/.codex/skills/align-with-me` | 当前用户跨项目使用，适合个人长期工作习惯 |
+| 用户层 | `~/.agents/skills/align-with-me` | 当前用户跨项目使用，适合个人长期工作习惯 |
 
 也可以在已经下载的仓库根目录直接运行：
 
@@ -25,7 +25,7 @@
 python3 scripts/install_skill.py
 ```
 
-脚本默认会停下来询问安装范围；自动化环境可以显式使用 `--scope project` 或 `--scope user`。如果目标目录已有不同内容，脚本会停止并保留原文件。
+脚本默认会停下来询问安装范围；如果目标 Agent 使用其他技能目录，可以用 `--project-skills-dir` 或 `--user-skills-dir` 覆盖默认路径；自动化环境可以显式使用 `--scope project` 或 `--scope user`。核心安装文件是 `SKILL.md`，`agents/openai.yaml` 属于可选的 Agent 平台适配元数据，可通过 `--include-openai-metadata` 额外安装。如果目标目录已有不同内容，脚本会停止并保留原文件。
 
 ## 为什么需要它
 
@@ -93,7 +93,7 @@ AI 协作很容易把这个节奏压扁成一张计划表。即使计划写得�
 
 ```text
 SKILL.md                 # 技能的核心行为规范
-agents/openai.yaml       # Agent 界面展示与默认调用提示
+agents/openai.yaml       # 可选的 Agent 平台适配元数据
 scripts/install_skill.py # 交互式安装脚本
 README.md                # 本说明
 ```

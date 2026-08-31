@@ -12,9 +12,9 @@ Keep the user's intended experience, not the implementation, as the source of tr
 When the user asks to install this skill or a skill package from a repository, ask them to choose the installation scope before writing files:
 
 - **Project layer**: `<project>/.agents/skills/<skill-name>`, available to that project and its collaborators.
-- **User layer**: `$CODEX_HOME/skills/<skill-name>`; when `CODEX_HOME` is not set, use `~/.codex/skills/<skill-name>`, available across the user's projects.
+- **User layer**: `~/.agents/skills/<skill-name>`, available across the user's projects.
 
-Do not choose silently. After the user chooses, install only to that scope and report the final path. If the source repository provides `scripts/install_skill.py`, use it. Treat an existing target as potentially user-owned: do not overwrite differing contents without explicit permission. Confirm that the installed `SKILL.md` exists before claiming success.
+If the target Agent documents different skill directories, use its convention or an explicit path supplied by the user. Treat `SKILL.md` as the required portable skill file and platform-specific metadata as optional. Do not choose the scope silently. After the user chooses, install only to that scope and report the final path. If the source repository provides `scripts/install_skill.py`, use it and pass an explicit directory override when needed. Treat an existing target as potentially user-owned: do not overwrite differing contents without explicit permission. Confirm that the installed `SKILL.md` exists before claiming success.
 
 ## Gate Implementation on Intent
 
