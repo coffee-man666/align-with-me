@@ -1,0 +1,4 @@
+interface:
+  display_name: "Align With Me"
+  short_description: "Align builds to user-visible outcomes"
+  default_prompt: "Use $align-with-me to align this build with my intended experience before implementation."
