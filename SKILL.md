@@ -7,6 +7,15 @@ description: Align plans and implementation work with the user's intended, obser
 
 Keep the user's intended experience, not the implementation, as the source of truth.
 
+## Choose the Skill Installation Scope
+
+When the user asks to install this skill or a skill package from a repository, ask them to choose the installation scope before writing files:
+
+- **Project layer**: `<project>/.agents/skills/<skill-name>`, available to that project and its collaborators.
+- **User layer**: `$CODEX_HOME/skills/<skill-name>`; when `CODEX_HOME` is not set, use `~/.codex/skills/<skill-name>`, available across the user's projects.
+
+Do not choose silently. After the user chooses, install only to that scope and report the final path. If the source repository provides `scripts/install_skill.py`, use it. Treat an existing target as potentially user-owned: do not overwrite differing contents without explicit permission. Confirm that the installed `SKILL.md` exists before claiming success.
+
 ## Gate Implementation on Intent
 
 Before discussing architecture, presenting a plan, editing files, or making changes, write this restatement in the user's language:
